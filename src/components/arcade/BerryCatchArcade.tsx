@@ -436,7 +436,7 @@ export const BerryCatchArcade: React.FC<BerryCatchArcadeProps> = ({
 
       {/* GAME OVER SCREEN */}
       {gameState === 'gameover' && (
-        <div className="bg-cozy-surface p-8 rounded-3xl border-2 border-cozy-border shadow-lg text-center space-y-6 max-w-md mx-auto animate-bounce-subtle">
+        <div className="bg-cozy-surface p-8 rounded-3xl border-2 border-cozy-border shadow-lg text-center space-y-6 max-w-md mx-auto">
           <div className="text-5xl">🧺✨</div>
           <div>
             <h3 className="text-2xl sm:text-3xl font-black text-cozy-text">Basket Full!</h3>

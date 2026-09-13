@@ -308,7 +308,7 @@ export const TypingArena: React.FC<TypingArenaProps> = ({
       {/* Completion Modal */}
       {status === 'completed' && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-cozy-surface p-6 sm:p-8 rounded-3xl border-2 border-cozy-border shadow-xl max-w-md w-full text-center space-y-5 animate-bounce-subtle">
+          <div className="bg-cozy-surface p-6 sm:p-8 rounded-3xl border-2 border-cozy-border shadow-xl max-w-md w-full text-center space-y-5">
             <div className="text-5xl">🎉</div>
             <h3 className="text-2xl font-black text-cozy-text">Lesson Completed!</h3>
 
