@@ -65,10 +65,7 @@ function migrateHabitat(id: HabitatId, raw: unknown): Habitat {
   const crop = HABITAT_CROPS[id];
   const level = typeof source.level === 'number' && source.level >= 1 ? Math.min(3, Math.floor(source.level)) : fallback.level;
   const lastHarvestTime = typeof source.lastHarvestTime === 'number' ? source.lastHarvestTime : 0;
-  const harvestReady =
-    typeof source.harvestReady === 'boolean'
-      ? source.harvestReady
-      : lastHarvestTime === 0 || Date.now() - lastHarvestTime >= HARVEST_COOLDOWN_MS;
+  const harvestReady = lastHarvestTime === 0 || Date.now() - lastHarvestTime >= HARVEST_COOLDOWN_MS;
 
   return {
     ...fallback,

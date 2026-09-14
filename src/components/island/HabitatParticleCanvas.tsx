@@ -128,7 +128,7 @@ function spawnParticle(kind: ParticleKind, width: number, height: number): Parti
     case 'orb':
       return { ...base, vx: rand(-8, 8), vy: rand(-8, 8), size: rand(3, 6), hue: rand(260, 320) };
     case 'spore':
-      return { ...base, vx: rand(-5, 5), vy: rand(-10, -2), size: rand(3, 6), hue: 290 };
+      return { ...base, vx: rand(-5, 5), vy: rand(-10, -2), size: rand(3, 6), hue: 290, maxLife: rand(2, 3.5), life: rand(0, 1) };
   }
 }
 

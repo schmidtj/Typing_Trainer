@@ -1,14 +1,15 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Heart, Sparkles, Utensils, ArrowUpRight } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { UserProfile } from '../../types/profile';
-import { Animal, AnimalId, HabitatId, HABITAT_IDS, MAX_HABITAT_LEVEL, upgradeCostForLevel } from '../../types/island';
+import { Animal, AnimalId, HabitatId, HABITAT_IDS, HARVEST_COOLDOWN_MS, MAX_HABITAT_LEVEL, upgradeCostForLevel } from '../../types/island';
 import { soundManager } from '../../audio/soundManager';
 import {
   assignableAnimals,
   assignAnimal,
   feedAnimal,
   harvestHabitat,
+  isHabitatHarvestReady,
   residentsOf,
   selectHabitat,
   setActiveCompanion,
@@ -41,6 +42,7 @@ export const HabitatDiorama: React.FC<HabitatDioramaProps> = ({ profile, onUpdat
   const scene = HABITAT_SCENE[selectedHabitatId];
   const upgradeCost = upgradeCostForLevel(habitat.level);
   const canUpgrade = habitat.unlocked && habitat.level < MAX_HABITAT_LEVEL && profile.coins >= upgradeCost;
+  const harvestReady = isHabitatHarvestReady(habitat);
   const candidates = assignableAnimals(profile.island, selectedHabitatId);
   const moveTargets = unlockedHabitatsWithRoom(profile.island, focusedAnimalId).filter(
     (id) => id !== selectedHabitatId,
@@ -50,6 +52,14 @@ export const HabitatDiorama: React.FC<HabitatDioramaProps> = ({ profile, onUpdat
     setHeartAnimId(animalId);
     window.setTimeout(() => setHeartAnimId(null), 1000);
   };
+
+  const [, refreshHarvestState] = useState(0);
+  useEffect(() => {
+    if (harvestReady) return undefined;
+    const timeUntilReady = Math.max(0, habitat.lastHarvestTime + HARVEST_COOLDOWN_MS - Date.now());
+    const timer = window.setTimeout(() => refreshHarvestState((tick) => tick + 1), timeUntilReady);
+    return () => window.clearTimeout(timer);
+  }, [habitat.lastHarvestTime, harvestReady]);
 
   const handleSelectHabitat = (habitatId: HabitatId) => {
     const next = selectHabitat(profile, habitatId);
@@ -159,11 +169,11 @@ export const HabitatDiorama: React.FC<HabitatDioramaProps> = ({ profile, onUpdat
               <button
                 type="button"
                 onClick={handleHarvest}
-                disabled={!habitat.unlocked || !habitat.harvestReady}
+                disabled={!habitat.unlocked || !harvestReady}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white shadow-xs"
               >
                 <span>{habitat.harvestCropIcon}</span>
-                {habitat.harvestReady ? `Harvest ${habitat.harvestCropName}` : 'Crops growing...'}
+                {harvestReady ? `Harvest ${habitat.harvestCropName}` : 'Crops growing...'}
               </button>
               <button
                 type="button"

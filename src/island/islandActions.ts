@@ -2,13 +2,19 @@ import { UserProfile } from '../types/profile';
 import {
   Animal,
   AnimalId,
+  Habitat,
   HabitatId,
+  HARVEST_COOLDOWN_MS,
   IslandState,
   MAX_HABITAT_LEVEL,
   capacityForLevel,
   harvestRewardsForLevel,
   upgradeCostForLevel,
 } from '../types/island';
+
+export function isHabitatHarvestReady(habitat: Pick<Habitat, 'lastHarvestTime'>): boolean {
+  return habitat.lastHarvestTime === 0 || Date.now() - habitat.lastHarvestTime >= HARVEST_COOLDOWN_MS;
+}
 
 export function residentsOf(island: IslandState, habitatId: HabitatId): Animal[] {
   return Object.values(island.animals).filter(
@@ -157,7 +163,7 @@ export function assignAnimal(
 
 export function harvestHabitat(profile: UserProfile, habitatId: HabitatId): UserProfile | null {
   const habitat = profile.island.habitats[habitatId];
-  if (!habitat?.unlocked || !habitat.harvestReady) return null;
+  if (!habitat?.unlocked || !isHabitatHarvestReady(habitat)) return null;
 
   const rewards = harvestRewardsForLevel(habitat.level);
   return {
