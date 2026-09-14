@@ -405,8 +405,8 @@ test.describe('Generate README Screenshots', () => {
     await page.getByRole('button', { name: /Arcade/i }).click();
     await page.waitForTimeout(400);
     await page.getByRole('button', { name: /Start Catching!/i }).click();
-    // Wait for fruit to drop
-    await page.waitForTimeout(3400);
+    // Wait for fruit words to drop nicely into mid-air
+    await page.waitForTimeout(6500);
     await page.screenshot({ path: 'docs/screenshots/05-berry-catch-arcade.png' });
 
     // Screenshot 6: Metrics & Analytics
