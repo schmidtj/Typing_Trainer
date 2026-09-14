@@ -1,139 +1,77 @@
 import React, { useState } from 'react';
 import { UserProfile } from '../../types/profile';
-import { Animal, AnimalId, HabitatId } from '../../types/island';
+import { AnimalId, HabitatId, HABITAT_IDS } from '../../types/island';
 import { soundManager } from '../../audio/soundManager';
-import { Heart, Sparkles, ShoppingBag, Utensils, Home, Lock } from 'lucide-react';
+import { Heart, Sparkles, ShoppingBag, Utensils, Home, Lock, Trees } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { HabitatDiorama } from './HabitatDiorama';
+import {
+  assignAnimal,
+  buyCosmetic,
+  buySnacks,
+  equipCosmetic,
+  setActiveCompanion,
+  unlockHabitat,
+} from '../../island/islandActions';
 
 interface IslandViewProps {
   profile: UserProfile;
   onUpdateProfile: (updated: UserProfile) => void;
 }
 
+type IslandTab = 'living' | 'roster' | 'boutique' | 'expansion';
+
 export const IslandView: React.FC<IslandViewProps> = ({
   profile,
   onUpdateProfile,
 }) => {
   const [selectedAnimalId, setSelectedAnimalId] = useState<AnimalId>('bunny');
-  const [activeTab, setActiveTab] = useState<'sanctuary' | 'wardrobe' | 'habitats'>('sanctuary');
-  const [heartAnimId, setHeartAnimId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<IslandTab>('living');
 
   const selectedAnimal = profile.island.animals[selectedAnimalId];
-  const totalUnlockedAnimals = Object.values(profile.island.animals).filter(a => a.unlocked).length;
+  const totalUnlockedAnimals = Object.values(profile.island.animals).filter((animal) => animal.unlocked).length;
 
-  const handlePetAnimal = (animal: Animal) => {
-    if (!animal.unlocked) return;
-    soundManager.playFeedAnimal();
-    setHeartAnimId(animal.id);
-    setTimeout(() => setHeartAnimId(null), 1000);
+  const applyUpdate = (next: UserProfile | null, sound: 'feed' | 'coin' | 'key' | 'complete' = 'key') => {
+    if (!next) return;
+    if (sound === 'feed') soundManager.playFeedAnimal();
+    if (sound === 'coin') soundManager.playCoin();
+    if (sound === 'key') soundManager.playKeypress(1);
+    if (sound === 'complete') soundManager.playLevelComplete();
+    onUpdateProfile(next);
   };
 
-  const handleFeedAnimal = (animalId: AnimalId) => {
-    if (profile.island.feedSnacksCount <= 0) return;
-    const current = profile.island.animals[animalId];
-    if (!current || current.happiness >= 100) return;
+  const handleBuySnacks = () => applyUpdate(buySnacks(profile), 'coin');
 
-    soundManager.playFeedAnimal();
-    setHeartAnimId(animalId);
-    setTimeout(() => setHeartAnimId(null), 1200);
-
-    const updatedAnimals = { ...profile.island.animals };
-    updatedAnimals[animalId] = {
-      ...current,
-      happiness: Math.min(100, current.happiness + 10),
-    };
-
-    onUpdateProfile({
-      ...profile,
-      island: {
-        ...profile.island,
-        animals: updatedAnimals,
-        feedSnacksCount: profile.island.feedSnacksCount - 1,
-      },
-    });
-  };
-
-  const handleBuySnacks = () => {
-    if (profile.coins < 20) return;
-    soundManager.playCoin();
-    onUpdateProfile({
-      ...profile,
-      coins: profile.coins - 20,
-      island: {
-        ...profile.island,
-        feedSnacksCount: profile.island.feedSnacksCount + 5,
-      },
-    });
-  };
-
-  const handleBuyCosmetic = (cosmeticId: string, cost: number) => {
-    if (profile.coins < cost) return;
+  const handleBuyCosmetic = (cosmeticId: string) => {
+    const next = buyCosmetic(profile, cosmeticId);
+    if (!next) return;
     soundManager.playCoin();
     confetti({ particleCount: 30, spread: 60, origin: { y: 0.7 } });
-
-    const updatedCosmetics = { ...profile.island.cosmetics };
-    if (updatedCosmetics[cosmeticId]) {
-      updatedCosmetics[cosmeticId] = {
-        ...updatedCosmetics[cosmeticId],
-        unlocked: true,
-      };
-    }
-
-    onUpdateProfile({
-      ...profile,
-      coins: profile.coins - cost,
-      island: {
-        ...profile.island,
-        cosmetics: updatedCosmetics,
-      },
-    });
+    onUpdateProfile(next);
   };
 
   const handleEquipCosmetic = (animalId: AnimalId, cosmeticId: string | undefined) => {
-    soundManager.playKeypress(1);
-    const updatedAnimals = { ...profile.island.animals };
-    if (updatedAnimals[animalId]) {
-      updatedAnimals[animalId] = {
-        ...updatedAnimals[animalId],
-        hatId: cosmeticId,
-      };
-    }
-
-    onUpdateProfile({
-      ...profile,
-      island: {
-        ...profile.island,
-        animals: updatedAnimals,
-      },
-    });
+    applyUpdate(equipCosmetic(profile, animalId, cosmeticId), 'key');
   };
 
-  const handleUnlockHabitat = (habitatId: HabitatId, cost: number) => {
-    if (profile.coins < cost) return;
+  const handleUnlockHabitat = (habitatId: HabitatId) => {
+    const next = unlockHabitat(profile, habitatId);
+    if (!next) return;
     soundManager.playLevelComplete();
     confetti({ particleCount: 50, spread: 80, origin: { y: 0.6 } });
+    onUpdateProfile(next);
+  };
 
-    const updatedHabitats = { ...profile.island.habitats };
-    if (updatedHabitats[habitatId]) {
-      updatedHabitats[habitatId] = {
-        ...updatedHabitats[habitatId],
-        unlocked: true,
-      };
-    }
+  const handleAssignFromRoster = (animalId: AnimalId, habitatId: HabitatId) => {
+    applyUpdate(assignAnimal(profile, animalId, habitatId), 'key');
+  };
 
-    onUpdateProfile({
-      ...profile,
-      coins: profile.coins - cost,
-      island: {
-        ...profile.island,
-        habitats: updatedHabitats,
-      },
-    });
+  const handleCompanionFromRoster = (animalId: AnimalId) => {
+    applyUpdate(setActiveCompanion(profile, animalId), 'key');
   };
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6">
-      {/* Top Sanctuary Header */}
       <div className="bg-cozy-surface p-6 rounded-3xl border-2 border-cozy-border shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -149,7 +87,6 @@ export const IslandView: React.FC<IslandViewProps> = ({
           </p>
         </div>
 
-        {/* Currency & Snacks Display */}
         <div className="flex items-center gap-3 bg-cozy-panel px-4 py-2.5 rounded-2xl border border-cozy-border">
           <div className="flex items-center gap-1.5 font-bold text-amber-700">
             <span className="text-lg">🪙</span>
@@ -170,22 +107,31 @@ export const IslandView: React.FC<IslandViewProps> = ({
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex items-center justify-center gap-2">
+      <div className="flex flex-wrap items-center justify-center gap-2">
         <button
-          onClick={() => setActiveTab('sanctuary')}
+          onClick={() => setActiveTab('living')}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-bold text-sm transition ${
-            activeTab === 'sanctuary'
+            activeTab === 'living'
               ? 'bg-emerald-500 text-white shadow-sm'
               : 'bg-cozy-surface text-cozy-subtext hover:bg-cozy-panel border border-cozy-border'
           }`}
         >
-          <span>🐾</span> Animals Meadow
+          <Trees className="w-4 h-4" /> Living Habitat
         </button>
         <button
-          onClick={() => setActiveTab('wardrobe')}
+          onClick={() => setActiveTab('roster')}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-bold text-sm transition ${
-            activeTab === 'wardrobe'
+            activeTab === 'roster'
+              ? 'bg-emerald-500 text-white shadow-sm'
+              : 'bg-cozy-surface text-cozy-subtext hover:bg-cozy-panel border border-cozy-border'
+          }`}
+        >
+          <span>🐾</span> Sanctuary Roster
+        </button>
+        <button
+          onClick={() => setActiveTab('boutique')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-bold text-sm transition ${
+            activeTab === 'boutique'
               ? 'bg-purple-500 text-white shadow-sm'
               : 'bg-cozy-surface text-cozy-subtext hover:bg-cozy-panel border border-cozy-border'
           }`}
@@ -193,9 +139,9 @@ export const IslandView: React.FC<IslandViewProps> = ({
           <ShoppingBag className="w-4 h-4" /> Boutique & Hats
         </button>
         <button
-          onClick={() => setActiveTab('habitats')}
+          onClick={() => setActiveTab('expansion')}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-bold text-sm transition ${
-            activeTab === 'habitats'
+            activeTab === 'expansion'
               ? 'bg-sky-500 text-white shadow-sm'
               : 'bg-cozy-surface text-cozy-subtext hover:bg-cozy-panel border border-cozy-border'
           }`}
@@ -204,46 +150,42 @@ export const IslandView: React.FC<IslandViewProps> = ({
         </button>
       </div>
 
-      {/* TAB 1: SANCTUARY MEADOW */}
-      {activeTab === 'sanctuary' && (
+      {activeTab === 'living' && (
+        <HabitatDiorama profile={profile} onUpdateProfile={onUpdateProfile} />
+      )}
+
+      {activeTab === 'roster' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: Animal Roster Grid */}
-          <div className="lg:col-span-2 bg-gradient-to-b from-emerald-50 via-green-50 to-amber-50 p-6 rounded-3xl border-2 border-emerald-200/80 shadow-sm relative overflow-hidden">
+          <div className="lg:col-span-2 bg-gradient-to-b from-emerald-50 via-green-50 to-amber-50 p-6 rounded-3xl border-2 border-emerald-200/80 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-emerald-950 flex items-center gap-2">
                 <span>🌸</span> Sanctuary Residents
               </h3>
-              <span className="text-xs text-emerald-700 font-semibold">Click an animal to interact</span>
+              <span className="text-xs text-emerald-700 font-semibold">Browse every friend and pick a companion</span>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
               {Object.values(profile.island.animals).map((animal) => {
                 const isSelected = selectedAnimalId === animal.id;
-                const isLoved = heartAnimId === animal.id;
                 const hat = animal.hatId ? profile.island.cosmetics[animal.hatId] : null;
+                const isCompanion = profile.island.activeCompanionId === animal.id;
 
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={animal.id}
-                    onClick={() => {
-                      setSelectedAnimalId(animal.id);
-                      if (animal.unlocked) handlePetAnimal(animal);
-                    }}
+                    onClick={() => setSelectedAnimalId(animal.id)}
                     className={`
-                      relative p-4 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all duration-200
+                      relative p-4 rounded-2xl flex flex-col items-center justify-center transition-all duration-200
                       ${isSelected ? 'ring-4 ring-emerald-400 bg-white shadow-md -translate-y-1' : 'bg-white/80 hover:bg-white shadow-xs hover:-translate-y-0.5'}
                       ${!animal.unlocked ? 'opacity-60 grayscale' : ''}
                     `}
                   >
-                    {/* Floating Heart Animation on Pet/Feed */}
-                    {isLoved && (
-                      <div className="absolute -top-3 animate-bounce text-rose-500 font-extrabold flex items-center gap-1 z-20">
-                        <Heart className="w-5 h-5 fill-rose-500" />
-                        <span className="text-xs">+Happiness!</span>
-                      </div>
+                    {isCompanion && (
+                      <span className="absolute top-2 right-2 text-[10px] font-extrabold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full">
+                        Companion
+                      </span>
                     )}
-
-                    {/* Animal Avatar & Hat */}
                     <div className="relative text-4xl sm:text-5xl mb-2 select-none">
                       {animal.icon}
                       {hat && (
@@ -252,11 +194,9 @@ export const IslandView: React.FC<IslandViewProps> = ({
                         </span>
                       )}
                     </div>
-
                     <span className="font-bold text-cozy-text text-xs sm:text-sm text-center">
                       {animal.name}
                     </span>
-
                     {animal.unlocked ? (
                       <div className="w-full mt-2 flex items-center gap-1">
                         <Heart className="w-3 h-3 text-rose-400 fill-rose-400 shrink-0" />
@@ -273,15 +213,14 @@ export const IslandView: React.FC<IslandViewProps> = ({
                         <span>Locked</span>
                       </div>
                     )}
-                  </div>
+                  </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Right: Selected Animal Detail Card */}
-          <div className="bg-cozy-surface p-6 rounded-3xl border-2 border-cozy-border shadow-sm flex flex-col justify-between">
-            {selectedAnimal ? (
+          <div className="bg-cozy-surface p-6 rounded-3xl border-2 border-cozy-border shadow-sm">
+            {selectedAnimal && (
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <div className="text-5xl p-3 bg-cozy-panel rounded-2xl border border-cozy-border">
@@ -316,31 +255,50 @@ export const IslandView: React.FC<IslandViewProps> = ({
 
                     <div className="bg-cozy-panel p-3 rounded-2xl border border-cozy-border text-xs space-y-1">
                       <div className="flex justify-between">
-                        <span className="text-cozy-subtext">Favorite Food:</span>
-                        <span className="font-bold text-cozy-text">{selectedAnimal.favoriteFood}</span>
+                        <span className="text-cozy-subtext">Native home:</span>
+                        <span className="font-bold text-cozy-text">
+                          {profile.island.habitats[selectedAnimal.nativeHabitatId].name}
+                        </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-cozy-subtext">Equipped Accessory:</span>
+                        <span className="text-cozy-subtext">Lives in:</span>
                         <span className="font-bold text-cozy-text">
-                          {selectedAnimal.hatId
-                            ? profile.island.cosmetics[selectedAnimal.hatId]?.name
-                            : 'None'}
+                          {selectedAnimal.assignedHabitatId
+                            ? profile.island.habitats[selectedAnimal.assignedHabitatId].name
+                            : 'Unassigned'}
                         </span>
                       </div>
                     </div>
 
                     <button
-                      onClick={() => handleFeedAnimal(selectedAnimal.id)}
-                      disabled={profile.island.feedSnacksCount <= 0 || selectedAnimal.happiness >= 100}
-                      className="w-full py-3 bg-rose-500 hover:bg-rose-600 disabled:opacity-50 text-white font-bold rounded-2xl shadow-sm transition flex items-center justify-center gap-2"
+                      type="button"
+                      onClick={() => handleCompanionFromRoster(selectedAnimal.id)}
+                      className="w-full py-2.5 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold rounded-2xl text-sm"
                     >
-                      <Utensils className="w-4 h-4" />
-                      {selectedAnimal.happiness >= 100
-                        ? 'Full & Happy! (100% ❤️)'
-                        : profile.island.feedSnacksCount <= 0
-                        ? 'No Snacks Left'
-                        : 'Feed Snack (+10 Happiness)'}
+                      {profile.island.activeCompanionId === selectedAnimal.id
+                        ? 'Active Companion'
+                        : 'Set as Active Companion'}
                     </button>
+
+                    <div className="space-y-2">
+                      <span className="text-xs font-bold text-cozy-subtext">Assign habitat</span>
+                      <div className="flex flex-wrap gap-2">
+                        {HABITAT_IDS.filter((id) => profile.island.habitats[id].unlocked).map((habitatId) => (
+                          <button
+                            key={habitatId}
+                            type="button"
+                            onClick={() => handleAssignFromRoster(selectedAnimal.id, habitatId)}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${
+                              selectedAnimal.assignedHabitatId === habitatId
+                                ? 'bg-emerald-500 text-white border-emerald-600'
+                                : 'bg-white border-cozy-border text-cozy-text hover:bg-cozy-panel'
+                            }`}
+                          >
+                            {profile.island.habitats[habitatId].icon} {profile.island.habitats[habitatId].name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200 text-xs space-y-2">
@@ -353,13 +311,12 @@ export const IslandView: React.FC<IslandViewProps> = ({
                   </div>
                 )}
               </div>
-            ) : null}
+            )}
           </div>
         </div>
       )}
 
-      {/* TAB 2: WARDROBE & BOUTIQUE */}
-      {activeTab === 'wardrobe' && (
+      {activeTab === 'boutique' && (
         <div className="bg-cozy-surface p-6 rounded-3xl border-2 border-cozy-border shadow-sm space-y-6">
           <div className="flex items-center justify-between">
             <div>
@@ -376,7 +333,6 @@ export const IslandView: React.FC<IslandViewProps> = ({
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {/* Unequip / None Option */}
             <div
               onClick={() => handleEquipCosmetic(selectedAnimalId, undefined)}
               className={`p-4 rounded-2xl border-2 flex flex-col items-center justify-center cursor-pointer transition ${
@@ -413,7 +369,7 @@ export const IslandView: React.FC<IslandViewProps> = ({
                     </button>
                   ) : (
                     <button
-                      onClick={() => handleBuyCosmetic(item.id, item.cost)}
+                      onClick={() => handleBuyCosmetic(item.id)}
                       disabled={profile.coins < item.cost}
                       className="w-full py-1.5 px-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white shadow-xs transition"
                     >
@@ -427,8 +383,7 @@ export const IslandView: React.FC<IslandViewProps> = ({
         </div>
       )}
 
-      {/* TAB 3: ISLAND HABITATS */}
-      {activeTab === 'habitats' && (
+      {activeTab === 'expansion' && (
         <div className="bg-cozy-surface p-6 rounded-3xl border-2 border-cozy-border shadow-sm space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-xl font-bold text-cozy-text flex items-center gap-2">
@@ -438,41 +393,41 @@ export const IslandView: React.FC<IslandViewProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Object.values(profile.island.habitats).map((habitat) => {
-              return (
-                <div
-                  key={habitat.id}
-                  className={`p-5 rounded-2xl border-2 flex flex-col justify-between transition ${
-                    habitat.unlocked
-                      ? 'border-emerald-300 bg-emerald-50/50'
-                      : 'border-cozy-border bg-cozy-panel'
-                  }`}
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-4xl p-2 bg-white rounded-xl shadow-xs">{habitat.icon}</span>
-                    <div>
-                      <h4 className="font-extrabold text-cozy-text text-sm sm:text-base">{habitat.name}</h4>
-                      <span className="text-xs text-cozy-subtext">Capacity: {habitat.capacity} animals</span>
-                    </div>
+            {Object.values(profile.island.habitats).map((habitat) => (
+              <div
+                key={habitat.id}
+                className={`p-5 rounded-2xl border-2 flex flex-col justify-between transition ${
+                  habitat.unlocked
+                    ? 'border-emerald-300 bg-emerald-50/50'
+                    : 'border-cozy-border bg-cozy-panel'
+                }`}
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-4xl p-2 bg-white rounded-xl shadow-xs">{habitat.icon}</span>
+                  <div>
+                    <h4 className="font-extrabold text-cozy-text text-sm sm:text-base">{habitat.name}</h4>
+                    <span className="text-xs text-cozy-subtext">
+                      Level {habitat.level} • Capacity {habitat.capacity}
+                    </span>
                   </div>
-
-                  {habitat.unlocked ? (
-                    <div className="bg-emerald-100 text-emerald-800 text-xs font-bold py-2 px-3 rounded-xl text-center border border-emerald-200">
-                      ✓ Open & Active
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => handleUnlockHabitat(habitat.id, habitat.cost)}
-                      disabled={profile.coins < habitat.cost}
-                      className="w-full py-2.5 px-3 bg-sky-500 hover:bg-sky-600 disabled:opacity-50 text-white font-bold rounded-xl text-xs transition shadow-xs flex items-center justify-center gap-1.5"
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      Build Habitat ({habitat.cost} 🪙)
-                    </button>
-                  )}
                 </div>
-              );
-            })}
+
+                {habitat.unlocked ? (
+                  <div className="bg-emerald-100 text-emerald-800 text-xs font-bold py-2 px-3 rounded-xl text-center border border-emerald-200">
+                    ✓ Open & Active
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleUnlockHabitat(habitat.id)}
+                    disabled={profile.coins < habitat.cost}
+                    className="w-full py-2.5 px-3 bg-sky-500 hover:bg-sky-600 disabled:opacity-50 text-white font-bold rounded-xl text-xs transition shadow-xs flex items-center justify-center gap-1.5"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Build Habitat ({habitat.cost} 🪙)
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}
