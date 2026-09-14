@@ -9,6 +9,7 @@ import {
   exportBackupJson,
   importBackupJson,
   calculateLevel,
+  migrateIslandState,
 } from '../profileStorage';
 
 describe('profileStorage', () => {
@@ -68,6 +69,83 @@ describe('profileStorage', () => {
 
     const restored = getActiveProfile();
     expect(restored.coins).toBe(999);
+  });
+
+  it('migrates legacy island state onto existing profiles', () => {
+    const legacyIsland = {
+      animals: {
+        bunny: {
+          id: 'bunny',
+          name: 'Barnaby Bunny',
+          species: 'Bunny',
+          icon: '🐰',
+          description: 'legacy',
+          unlockRequirement: 'start',
+          unlocked: true,
+          assignedHabitatId: 'meadow',
+          happiness: 42,
+          favoriteFood: 'Crisp Carrot',
+        },
+      },
+      habitats: {
+        meadow: {
+          id: 'meadow',
+          name: 'Sunny Clover Meadow',
+          icon: '🌸',
+          unlocked: true,
+          cost: 0,
+          level: 1,
+          capacity: 3,
+        },
+      },
+      cosmetics: {},
+      feedSnacksCount: 2,
+    };
+
+    const migrated = migrateIslandState(legacyIsland);
+    expect(migrated.selectedHabitatId).toBe('meadow');
+    expect(migrated.activeCompanionId).toBe('bunny');
+    expect(migrated.animals.bunny.nativeHabitatId).toBe('meadow');
+    expect(migrated.animals.bunny.happiness).toBe(42);
+    expect(migrated.animals.fox.nativeHabitatId).toBe('forest_treehouse');
+    expect(migrated.habitats.meadow.biomeTheme).toBe('meadow');
+    expect(migrated.habitats.meadow.harvestCropName).toBe('Clover Berries');
+    expect(migrated.habitats.meadow.harvestReady).toBe(true);
+    expect(migrated.feedSnacksCount).toBe(2);
+
+    localStorage.setItem(
+      'cozy_animal_typing_trainer_data_v1',
+      JSON.stringify({
+        version: 1,
+        activeProfileId: 'legacy',
+        profiles: {
+          legacy: {
+            id: 'legacy',
+            name: 'Legacy Hero',
+            avatar: '🐰',
+            createdAt: 1,
+            lastPlayed: 1,
+            level: 1,
+            xp: 0,
+            coins: 10,
+            gems: 0,
+            currentStageId: 1,
+            currentLessonId: 'stage-1-lesson-1',
+            completedLevels: {},
+            island: legacyIsland,
+            metrics: { totalWordsTyped: 0, totalTimeSeconds: 0, highestWpm: 0, averageWpm: 0, averageAccuracy: 100, keyStats: {}, sessionHistory: [] },
+            settings: { soundVolume: 0.7, soundMuted: false, showKeyboard: true, showHandGuide: true, fontSize: 'normal', strictBackspace: true },
+            arcadeHighScore: 0,
+            achievements: [],
+          },
+        },
+      }),
+    );
+
+    const loaded = getActiveProfile();
+    expect(loaded.island.animals.penguin.nativeHabitatId).toBe('snowy_peak');
+    expect(loaded.island.habitats.fairy_hollow.harvestCropIcon).toBe('✨');
+    expect(loaded.island.selectedHabitatId).toBe('meadow');
   });
 
   it('calculates RPG levels accurately based on XP', () => {

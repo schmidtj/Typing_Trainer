@@ -1,5 +1,21 @@
 import { ProfileRegistry, UserProfile } from '../types/profile';
-import { createNewProfile } from './defaultData';
+import {
+  Animal,
+  AnimalId,
+  CosmeticItem,
+  Habitat,
+  HabitatId,
+  HABITAT_CROPS,
+  HARVEST_COOLDOWN_MS,
+  IslandState,
+  NATIVE_HABITAT_BY_ANIMAL,
+  ANIMAL_IDS,
+  HABITAT_IDS,
+  capacityForLevel,
+  isAnimalId,
+  isHabitatId,
+} from '../types/island';
+import { createDefaultIslandState, createNewProfile, INITIAL_ANIMALS, INITIAL_COSMETICS, INITIAL_HABITATS } from './defaultData';
 
 const STORAGE_KEY = 'cozy_animal_typing_trainer_data_v1';
 const CURRENT_VERSION = 1;
@@ -25,6 +41,128 @@ export function calculateLevel(xp: number): { level: number; currentLevelXp: num
   };
 }
 
+function migrateAnimal(id: AnimalId, raw: unknown): Animal {
+  const fallback = INITIAL_ANIMALS[id];
+  const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const assigned = isHabitatId(source.assignedHabitatId) ? source.assignedHabitatId : fallback.assignedHabitatId;
+  const native = isHabitatId(source.nativeHabitatId) ? source.nativeHabitatId : NATIVE_HABITAT_BY_ANIMAL[id];
+
+  return {
+    ...fallback,
+    ...source,
+    id,
+    nativeHabitatId: native,
+    assignedHabitatId: assigned,
+    unlocked: typeof source.unlocked === 'boolean' ? source.unlocked : fallback.unlocked,
+    happiness: typeof source.happiness === 'number' ? Math.max(0, Math.min(100, source.happiness)) : fallback.happiness,
+    hatId: typeof source.hatId === 'string' ? source.hatId : fallback.hatId,
+  };
+}
+
+function migrateHabitat(id: HabitatId, raw: unknown): Habitat {
+  const fallback = INITIAL_HABITATS[id];
+  const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const crop = HABITAT_CROPS[id];
+  const level = typeof source.level === 'number' && source.level >= 1 ? Math.min(3, Math.floor(source.level)) : fallback.level;
+  const lastHarvestTime = typeof source.lastHarvestTime === 'number' ? source.lastHarvestTime : 0;
+  const harvestReady =
+    typeof source.harvestReady === 'boolean'
+      ? source.harvestReady
+      : lastHarvestTime === 0 || Date.now() - lastHarvestTime >= HARVEST_COOLDOWN_MS;
+
+  return {
+    ...fallback,
+    ...source,
+    id,
+    level,
+    capacity: typeof source.capacity === 'number' && source.capacity > 0 ? source.capacity : capacityForLevel(level),
+    biomeTheme: isHabitatId(source.biomeTheme) ? source.biomeTheme : id,
+    harvestCropName: typeof source.harvestCropName === 'string' ? source.harvestCropName : crop.harvestCropName,
+    harvestCropIcon: typeof source.harvestCropIcon === 'string' ? source.harvestCropIcon : crop.harvestCropIcon,
+    harvestReady,
+    lastHarvestTime,
+    decorations: Array.isArray(source.decorations)
+      ? source.decorations.filter((item): item is string => typeof item === 'string')
+      : [],
+    unlocked: typeof source.unlocked === 'boolean' ? source.unlocked : fallback.unlocked,
+    cost: typeof source.cost === 'number' ? source.cost : fallback.cost,
+  };
+}
+
+function migrateCosmetic(id: string, raw: unknown): CosmeticItem {
+  const fallback = INITIAL_COSMETICS[id];
+  const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  if (!fallback) {
+    return {
+      id,
+      name: typeof source.name === 'string' ? source.name : id,
+      type: source.type === 'bow' || source.type === 'glasses' || source.type === 'flower' ? source.type : 'hat',
+      icon: typeof source.icon === 'string' ? source.icon : '🎩',
+      cost: typeof source.cost === 'number' ? source.cost : 0,
+      unlocked: source.unlocked === true,
+    };
+  }
+
+  return {
+    ...fallback,
+    ...source,
+    id,
+    unlocked: typeof source.unlocked === 'boolean' ? source.unlocked : fallback.unlocked,
+  };
+}
+
+export function migrateIslandState(island: any): IslandState {
+  const defaults = createDefaultIslandState();
+  if (!island || typeof island !== 'object') {
+    return defaults;
+  }
+
+  const rawAnimals = island.animals && typeof island.animals === 'object' ? island.animals : {};
+  const animals = { ...defaults.animals };
+  for (const id of ANIMAL_IDS) {
+    animals[id] = migrateAnimal(id, rawAnimals[id]);
+  }
+
+  const rawHabitats = island.habitats && typeof island.habitats === 'object' ? island.habitats : {};
+  const habitats = { ...defaults.habitats };
+  for (const id of HABITAT_IDS) {
+    habitats[id] = migrateHabitat(id, rawHabitats[id]);
+  }
+
+  const rawCosmetics = island.cosmetics && typeof island.cosmetics === 'object' ? island.cosmetics : {};
+  const cosmetics = { ...defaults.cosmetics };
+  for (const id of Object.keys({ ...INITIAL_COSMETICS, ...rawCosmetics })) {
+    cosmetics[id] = migrateCosmetic(id, rawCosmetics[id] ?? cosmetics[id]);
+  }
+
+  const selectedHabitatId = isHabitatId(island.selectedHabitatId) ? island.selectedHabitatId : 'meadow';
+  const activeCompanionId = isAnimalId(island.activeCompanionId) ? island.activeCompanionId : 'bunny';
+
+  return {
+    animals,
+    habitats,
+    cosmetics,
+    feedSnacksCount: typeof island.feedSnacksCount === 'number' ? Math.max(0, island.feedSnacksCount) : defaults.feedSnacksCount,
+    selectedHabitatId,
+    activeCompanionId,
+  };
+}
+
+function migrateProfile(profile: UserProfile): UserProfile {
+  return {
+    ...profile,
+    island: migrateIslandState(profile.island),
+  };
+}
+
+function migrateRegistry(registry: ProfileRegistry): ProfileRegistry {
+  const profiles: Record<string, UserProfile> = {};
+  for (const [id, profile] of Object.entries(registry.profiles)) {
+    profiles[id] = migrateProfile(profile);
+  }
+  return { ...registry, profiles };
+}
+
 export function loadRegistry(): ProfileRegistry {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -35,7 +173,6 @@ export function loadRegistry(): ProfileRegistry {
     if (!parsed || typeof parsed !== 'object' || !parsed.profiles || !parsed.activeProfileId) {
       return createInitialRegistry();
     }
-    // Check if active profile exists
     if (!parsed.profiles[parsed.activeProfileId]) {
       const firstId = Object.keys(parsed.profiles)[0];
       if (firstId) {
@@ -44,7 +181,7 @@ export function loadRegistry(): ProfileRegistry {
         return createInitialRegistry();
       }
     }
-    return parsed;
+    return migrateRegistry(parsed);
   } catch {
     return createInitialRegistry();
   }
@@ -75,7 +212,11 @@ function createInitialRegistry(): ProfileRegistry {
 
 export function getActiveProfile(): UserProfile {
   const registry = loadRegistry();
-  return registry.profiles[registry.activeProfileId] || createInitialRegistry().profiles[registry.activeProfileId];
+  const profile = registry.profiles[registry.activeProfileId] || createInitialRegistry().profiles[registry.activeProfileId];
+  return {
+    ...profile,
+    island: migrateIslandState(profile.island),
+  };
 }
 
 export function saveActiveProfile(profile: UserProfile): void {
@@ -135,7 +276,7 @@ export function importBackupJson(jsonString: string): { success: boolean; error?
     if (profileKeys.length === 0) {
       return { success: false, error: 'Backup does not contain any profiles.' };
     }
-    saveRegistry(parsed);
+    saveRegistry(migrateRegistry(parsed));
     return { success: true };
   } catch (e) {
     return { success: false, error: (e as Error).message || 'Failed to parse JSON backup.' };

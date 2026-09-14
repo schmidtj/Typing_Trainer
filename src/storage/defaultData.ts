@@ -1,4 +1,14 @@
-import { IslandState, Animal, Habitat, CosmeticItem } from '../types/island';
+import {
+  Animal,
+  AnimalId,
+  CosmeticItem,
+  Habitat,
+  HabitatId,
+  HABITAT_CROPS,
+  IslandState,
+  NATIVE_HABITAT_BY_ANIMAL,
+  capacityForLevel,
+} from '../types/island';
 import { UserProfile, UserSettings } from '../types/profile';
 import { UserMetrics } from '../types/metrics';
 
@@ -21,9 +31,21 @@ export const INITIAL_METRICS: UserMetrics = {
   sessionHistory: [],
 };
 
-export const INITIAL_ANIMALS: Record<string, Animal> = {
-  bunny: {
-    id: 'bunny',
+function animal(
+  id: AnimalId,
+  fields: Omit<Animal, 'id' | 'nativeHabitatId' | 'assignedHabitatId'> & {
+    assignedHabitatId?: HabitatId;
+  },
+): Animal {
+  return {
+    id,
+    nativeHabitatId: NATIVE_HABITAT_BY_ANIMAL[id],
+    ...fields,
+  };
+}
+
+export const INITIAL_ANIMALS: Record<AnimalId, Animal> = {
+  bunny: animal('bunny', {
     name: 'Barnaby Bunny',
     species: 'Bunny',
     icon: '🐰',
@@ -33,9 +55,8 @@ export const INITIAL_ANIMALS: Record<string, Animal> = {
     assignedHabitatId: 'meadow',
     happiness: 90,
     favoriteFood: 'Crisp Carrot',
-  },
-  kitten: {
-    id: 'kitten',
+  }),
+  kitten: animal('kitten', {
     name: 'Mochi Kitten',
     species: 'Kitten',
     icon: '🐱',
@@ -44,9 +65,8 @@ export const INITIAL_ANIMALS: Record<string, Animal> = {
     unlocked: false,
     happiness: 80,
     favoriteFood: 'Tuna Treats',
-  },
-  fox: {
-    id: 'fox',
+  }),
+  fox: animal('fox', {
     name: 'Rusty Fox',
     species: 'Fox',
     icon: '🦊',
@@ -55,9 +75,8 @@ export const INITIAL_ANIMALS: Record<string, Animal> = {
     unlocked: false,
     happiness: 75,
     favoriteFood: 'Sweet Wildberries',
-  },
-  panda: {
-    id: 'panda',
+  }),
+  panda: animal('panda', {
     name: 'Bao Bao Panda',
     species: 'Panda',
     icon: '🐼',
@@ -66,9 +85,8 @@ export const INITIAL_ANIMALS: Record<string, Animal> = {
     unlocked: false,
     happiness: 85,
     favoriteFood: 'Bamboo Shoots',
-  },
-  penguin: {
-    id: 'penguin',
+  }),
+  penguin: animal('penguin', {
     name: 'Pip Penguin',
     species: 'Penguin',
     icon: '🐧',
@@ -77,9 +95,8 @@ export const INITIAL_ANIMALS: Record<string, Animal> = {
     unlocked: false,
     happiness: 80,
     favoriteFood: 'Glacier Pops',
-  },
-  owl: {
-    id: 'owl',
+  }),
+  owl: animal('owl', {
     name: 'Professor Hoot',
     species: 'Owl',
     icon: '🦉',
@@ -88,9 +105,8 @@ export const INITIAL_ANIMALS: Record<string, Animal> = {
     unlocked: false,
     happiness: 90,
     favoriteFood: 'Acorn Crunch',
-  },
-  capybara: {
-    id: 'capybara',
+  }),
+  capybara: animal('capybara', {
     name: 'Cappy Capybara',
     species: 'Capybara',
     icon: '🦫',
@@ -99,9 +115,8 @@ export const INITIAL_ANIMALS: Record<string, Animal> = {
     unlocked: false,
     happiness: 95,
     favoriteFood: 'Yuzu Melon',
-  },
-  otter: {
-    id: 'otter',
+  }),
+  otter: animal('otter', {
     name: 'Ollie Otter',
     species: 'Otter',
     icon: '🦦',
@@ -110,9 +125,8 @@ export const INITIAL_ANIMALS: Record<string, Animal> = {
     unlocked: false,
     happiness: 85,
     favoriteFood: 'River Clams',
-  },
-  dragon: {
-    id: 'dragon',
+  }),
+  dragon: animal('dragon', {
     name: 'Sparky Baby Dragon',
     species: 'Dragon',
     icon: '🐲',
@@ -121,64 +135,69 @@ export const INITIAL_ANIMALS: Record<string, Animal> = {
     unlocked: false,
     happiness: 100,
     favoriteFood: 'Fire Blossom Honey',
-  },
+  }),
 };
 
-export const INITIAL_HABITATS: Record<string, Habitat> = {
-  meadow: {
-    id: 'meadow',
+function habitat(
+  id: HabitatId,
+  fields: Pick<Habitat, 'name' | 'icon' | 'unlocked' | 'cost'> & { level?: number },
+): Habitat {
+  const level = fields.level ?? 1;
+  const crop = HABITAT_CROPS[id];
+  return {
+    id,
+    name: fields.name,
+    icon: fields.icon,
+    unlocked: fields.unlocked,
+    cost: fields.cost,
+    level,
+    capacity: capacityForLevel(level),
+    biomeTheme: id,
+    harvestCropName: crop.harvestCropName,
+    harvestCropIcon: crop.harvestCropIcon,
+    harvestReady: true,
+    lastHarvestTime: 0,
+    decorations: [],
+  };
+}
+
+export const INITIAL_HABITATS: Record<HabitatId, Habitat> = {
+  meadow: habitat('meadow', {
     name: 'Sunny Clover Meadow',
     icon: '🌸',
     unlocked: true,
     cost: 0,
-    level: 1,
-    capacity: 3,
-  },
-  forest_treehouse: {
-    id: 'forest_treehouse',
+  }),
+  forest_treehouse: habitat('forest_treehouse', {
     name: 'Oak Treehouse',
     icon: '🏡',
     unlocked: false,
     cost: 100,
-    level: 1,
-    capacity: 3,
-  },
-  crystal_pond: {
-    id: 'crystal_pond',
+  }),
+  crystal_pond: habitat('crystal_pond', {
     name: 'Sparkle Lily Pond',
     icon: '🪷',
     unlocked: false,
     cost: 250,
-    level: 1,
-    capacity: 3,
-  },
-  bamboo_grove: {
-    id: 'bamboo_grove',
+  }),
+  bamboo_grove: habitat('bamboo_grove', {
     name: 'Zen Bamboo Grove',
     icon: '🎋',
     unlocked: false,
     cost: 400,
-    level: 1,
-    capacity: 3,
-  },
-  snowy_peak: {
-    id: 'snowy_peak',
+  }),
+  snowy_peak: habitat('snowy_peak', {
     name: 'Frosty Peak Igloo',
     icon: '❄️',
     unlocked: false,
     cost: 600,
-    level: 1,
-    capacity: 3,
-  },
-  fairy_hollow: {
-    id: 'fairy_hollow',
+  }),
+  fairy_hollow: habitat('fairy_hollow', {
     name: 'Starlight Fairy Hollow',
     icon: '✨',
     unlocked: false,
     cost: 1000,
-    level: 1,
-    capacity: 4,
-  },
+  }),
 };
 
 export const INITIAL_COSMETICS: Record<string, CosmeticItem> = {
@@ -192,12 +211,18 @@ export const INITIAL_COSMETICS: Record<string, CosmeticItem> = {
   daisy_flower: { id: 'daisy_flower', name: 'Meadow Daisy', type: 'flower', icon: '🌼', cost: 40, unlocked: true },
 };
 
+function cloneRecord<T extends Record<string, unknown>>(record: T): T {
+  return JSON.parse(JSON.stringify(record)) as T;
+}
+
 export function createDefaultIslandState(): IslandState {
   return {
-    animals: { ...INITIAL_ANIMALS } as unknown as IslandState['animals'],
-    habitats: { ...INITIAL_HABITATS } as unknown as IslandState['habitats'],
-    cosmetics: { ...INITIAL_COSMETICS },
+    animals: cloneRecord(INITIAL_ANIMALS),
+    habitats: cloneRecord(INITIAL_HABITATS),
+    cosmetics: cloneRecord(INITIAL_COSMETICS),
     feedSnacksCount: 5,
+    selectedHabitatId: 'meadow',
+    activeCompanionId: 'bunny',
   };
 }
 
@@ -211,7 +236,7 @@ export function createNewProfile(name: string, avatar: string = '🐰', startAtS
     lastPlayed: Date.now(),
     level: 1,
     xp: 0,
-    coins: 50, // Welcome coins!
+    coins: 50,
     gems: 5,
     currentStageId: startAtStage,
     currentLessonId: `stage-${startAtStage}-lesson-1`,
