@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "screenshots": "playwright test e2e/generate-screenshots.spec.ts"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",
