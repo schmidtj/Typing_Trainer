@@ -30,23 +30,21 @@ export const IslandView: React.FC<IslandViewProps> = ({
 
   const handleFeedAnimal = (animalId: AnimalId) => {
     if (profile.island.feedSnacksCount <= 0) return;
+    const current = profile.island.animals[animalId];
+    if (!current || current.happiness >= 100) return;
 
     soundManager.playFeedAnimal();
     setHeartAnimId(animalId);
     setTimeout(() => setHeartAnimId(null), 1200);
 
     const updatedAnimals = { ...profile.island.animals };
-    const current = updatedAnimals[animalId];
-    if (current) {
-      updatedAnimals[animalId] = {
-        ...current,
-        happiness: Math.min(100, current.happiness + 10),
-      };
-    }
+    updatedAnimals[animalId] = {
+      ...current,
+      happiness: Math.min(100, current.happiness + 10),
+    };
 
     onUpdateProfile({
       ...profile,
-      coins: profile.coins + 5, // Reward for caring!
       island: {
         ...profile.island,
         animals: updatedAnimals,
@@ -333,11 +331,15 @@ export const IslandView: React.FC<IslandViewProps> = ({
 
                     <button
                       onClick={() => handleFeedAnimal(selectedAnimal.id)}
-                      disabled={profile.island.feedSnacksCount <= 0}
+                      disabled={profile.island.feedSnacksCount <= 0 || selectedAnimal.happiness >= 100}
                       className="w-full py-3 bg-rose-500 hover:bg-rose-600 disabled:opacity-50 text-white font-bold rounded-2xl shadow-sm transition flex items-center justify-center gap-2"
                     >
                       <Utensils className="w-4 h-4" />
-                      Feed Snack (+10 Happiness)
+                      {selectedAnimal.happiness >= 100
+                        ? 'Full & Happy! (100% ❤️)'
+                        : profile.island.feedSnacksCount <= 0
+                        ? 'No Snacks Left'
+                        : 'Feed Snack (+10 Happiness)'}
                     </button>
                   </div>
                 ) : (
