@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "screenshots": "playwright test e2e/generate-screenshots.spec.ts"
+    "screenshots": "PLAYWRIGHT_GENERATE_SCREENSHOTS=1 playwright test e2e/generate-screenshots.spec.ts"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",

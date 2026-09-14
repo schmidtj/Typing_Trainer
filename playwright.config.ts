@@ -1,7 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const generatingScreenshots = process.env.PLAYWRIGHT_GENERATE_SCREENSHOTS === '1';
+
 export default defineConfig({
   testDir: './e2e',
+  testIgnore: generatingScreenshots ? [] : /generate-screenshots\.spec\.ts/,
   fullyParallel: false,
   retries: 0,
   workers: 1,
