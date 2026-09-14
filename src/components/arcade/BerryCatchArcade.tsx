@@ -3,6 +3,7 @@ import { UserProfile } from '../../types/profile';
 import { soundManager } from '../../audio/soundManager';
 import { ArrowLeft, Play, RotateCcw, Heart, Zap, Sparkles, Trophy } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { HABITAT_SCENE } from '../island/habitatTheme';
 
 interface BerryCatchArcadeProps {
   profile: UserProfile;
@@ -52,6 +53,10 @@ export const BerryCatchArcade: React.FC<BerryCatchArcadeProps> = ({
   const [combo, setCombo] = useState(0);
   const [maxCombo, setMaxCombo] = useState(0);
   const [arcadeWpm, setArcadeWpm] = useState(0);
+
+  const companion = profile.island.animals[profile.island.activeCompanionId];
+  const companionHat = companion?.hatId ? profile.island.cosmetics[companion.hatId] : undefined;
+  const habitatTheme = HABITAT_SCENE[profile.island.selectedHabitatId];
 
   const requestRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(Date.now());
@@ -279,7 +284,7 @@ export const BerryCatchArcade: React.FC<BerryCatchArcadeProps> = ({
           <div>
             <h3 className="text-2xl sm:text-3xl font-black text-cozy-text">Ready to Catch Sweet Berries?</h3>
             <p className="text-xs sm:text-sm text-cozy-subtext mt-1 max-w-md mx-auto">
-              Test your speed and reflexes. Catch berries into Barnaby & Ollie Otter's baskets!
+              Test your speed and reflexes. Catch berries into {companion?.name ?? 'your companion'}'s basket!
             </p>
           </div>
 
@@ -376,7 +381,7 @@ export const BerryCatchArcade: React.FC<BerryCatchArcadeProps> = ({
           </div>
 
           {/* Falling Canvas Arena */}
-          <div className="relative h-96 w-full bg-gradient-to-b from-sky-100 via-sky-50 to-emerald-100 rounded-3xl border-2 border-cozy-border shadow-inner overflow-hidden">
+          <div className={`relative h-96 w-full bg-gradient-to-b ${habitatTheme.arenaGradient} rounded-3xl border-2 border-cozy-border shadow-inner overflow-hidden`}>
             {/* Background Clouds & Sun */}
             <div className="absolute top-4 left-6 text-3xl opacity-75">☁️</div>
             <div className="absolute top-8 right-12 text-2xl opacity-75">☁️</div>
@@ -416,10 +421,14 @@ export const BerryCatchArcade: React.FC<BerryCatchArcadeProps> = ({
             })}
 
             {/* Bottom Basket & Animals Ground */}
-            <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-emerald-300 via-emerald-200 to-transparent flex items-end justify-center pb-2 gap-8">
-              <div className="text-3xl">🐰</div>
+            <div className={`absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t ${habitatTheme.ground} flex items-end justify-center pb-2 gap-8`}>
+              <div className="relative text-3xl">
+                <span>{companion?.icon ?? '🐰'}</span>
+                {companionHat && (
+                  <span className="absolute -top-2 -right-2 text-lg">{companionHat.icon}</span>
+                )}
+              </div>
               <div className="text-4xl">🧺</div>
-              <div className="text-3xl">🦦</div>
             </div>
 
             {/* Current Typed Buffer Indicator */}
