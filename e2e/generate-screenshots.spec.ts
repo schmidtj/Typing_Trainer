@@ -276,11 +276,66 @@ test.describe('Generate README Screenshots', () => {
         q: { char: 'q', totalAttempts: 20, errors: 7, totalLatencyMs: 11000 },
       },
       sessionHistory: [
-        { date: '2026-09-08', wpm: 16, accuracy: 92, lessonId: 'stage-1-lesson-1' },
-        { date: '2026-09-09', wpm: 18, accuracy: 94, lessonId: 'stage-1-lesson-3' },
-        { date: '2026-09-11', wpm: 21, accuracy: 96, lessonId: 'stage-1-lesson-6' },
-        { date: '2026-09-13', wpm: 23, accuracy: 95, lessonId: 'stage-2-lesson-1' },
-        { date: '2026-09-14', wpm: 25, accuracy: 97, lessonId: 'stage-2-lesson-2' },
+        {
+          id: 'showcase-session-5',
+          timestamp: new Date('2026-09-14T12:00:00Z').getTime(),
+          lessonId: 'stage-2-lesson-2',
+          lessonTitle: 'The Great Vowels: E & I',
+          durationSeconds: 180,
+          rawWpm: 27,
+          netWpm: 25,
+          accuracy: 97,
+          stars: 2,
+          errorKeys: {},
+        },
+        {
+          id: 'showcase-session-4',
+          timestamp: new Date('2026-09-13T12:00:00Z').getTime(),
+          lessonId: 'stage-2-lesson-1',
+          lessonTitle: 'Pointer Reaches Up',
+          durationSeconds: 190,
+          rawWpm: 25,
+          netWpm: 23,
+          accuracy: 95,
+          stars: 3,
+          errorKeys: {},
+        },
+        {
+          id: 'showcase-session-3',
+          timestamp: new Date('2026-09-11T12:00:00Z').getTime(),
+          lessonId: 'stage-1-lesson-6',
+          lessonTitle: 'Home Row Haven Champion',
+          durationSeconds: 205,
+          rawWpm: 22,
+          netWpm: 21,
+          accuracy: 96,
+          stars: 3,
+          errorKeys: {},
+        },
+        {
+          id: 'showcase-session-2',
+          timestamp: new Date('2026-09-09T12:00:00Z').getTime(),
+          lessonId: 'stage-1-lesson-3',
+          lessonTitle: 'Ring Finger Friends',
+          durationSeconds: 220,
+          rawWpm: 19,
+          netWpm: 18,
+          accuracy: 94,
+          stars: 3,
+          errorKeys: {},
+        },
+        {
+          id: 'showcase-session-1',
+          timestamp: new Date('2026-09-08T12:00:00Z').getTime(),
+          lessonId: 'stage-1-lesson-1',
+          lessonTitle: 'The Pointer Bumps',
+          durationSeconds: 240,
+          rawWpm: 17,
+          netWpm: 16,
+          accuracy: 92,
+          stars: 2,
+          errorKeys: {},
+        },
       ],
     },
     settings: {
@@ -351,7 +406,7 @@ test.describe('Generate README Screenshots', () => {
     await page.waitForTimeout(400);
     await page.getByRole('button', { name: /Start Catching!/i }).click();
     // Wait for fruit to drop
-    await page.waitForTimeout(1400);
+    await page.waitForTimeout(3400);
     await page.screenshot({ path: 'docs/screenshots/05-berry-catch-arcade.png' });
 
     // Screenshot 6: Metrics & Analytics
