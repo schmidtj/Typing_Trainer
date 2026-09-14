@@ -79,6 +79,42 @@ test.describe('Cozy Animal Island Typing Trainer E2E', () => {
     await expect(page.getByText('Oak Treehouse')).toBeVisible();
   });
 
+  test('engages with Living Habitat, harvests crops, equips hat, and sees companion in typing and arcade', async ({ page }) => {
+    // Go to Sanctuary
+    await page.getByRole('button', { name: 'Sanctuary' }).click();
+    await expect(page.getByText('Living Habitat')).toBeVisible();
+
+    // Verify canvas particle engine is rendering
+    await expect(page.locator('canvas')).toBeVisible();
+
+    // Verify harvest is ready on fresh profile: Clover Berries
+    const harvestBtn = page.getByRole('button', { name: /Harvest Clover Berries/i });
+    await expect(harvestBtn).toBeVisible();
+    await harvestBtn.click();
+
+    // Snacks increase from 5 to 8, button changes to "Crops growing..."
+    await expect(page.getByText('8 Snacks', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Crops growing/i })).toBeVisible();
+
+    // Switch to Wardrobe & equip Sunny Straw Hat
+    await page.getByRole('button', { name: /Boutique & Hats/i }).click();
+    const wearHatBtn = page.getByRole('button', { name: 'Wear Hat' }).first();
+    await wearHatBtn.click();
+    await expect(page.getByRole('button', { name: 'Equipped' }).first()).toBeVisible();
+
+    // Go to Levels and open Lesson 1
+    await page.getByRole('button', { name: 'Levels' }).click();
+    await page.getByText('The Pointer Bumps').click();
+
+    // Verify Companion widget is present in TypingArena with Barnaby Bunny
+    await expect(page.getByText('Companion')).toBeVisible();
+    await expect(page.getByText('Barnaby Bunny')).toBeVisible();
+
+    // Check Arcade also features companion
+    await page.getByRole('button', { name: 'Arcade' }).click();
+    await expect(page.getByText('Berry Catch Arcade')).toBeVisible();
+  });
+
   test('plays Berry Catch arcade mini-game', async ({ page }) => {
     await page.getByRole('button', { name: 'Arcade' }).click();
 

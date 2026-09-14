@@ -4,9 +4,11 @@ import { UserProfile, LevelProgress } from '../../types/profile';
 import { useTypingEngine, TypingEngineResult } from '../../engine/useTypingEngine';
 import { VirtualKeyboard } from '../keyboard/VirtualKeyboard';
 import { HandGuide } from '../keyboard/HandGuide';
+import { TypingCompanionWidget } from './TypingCompanionWidget';
 import { ArrowLeft, RotateCcw, Sparkles, Star, Award, Zap, Heart } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { soundManager } from '../../audio/soundManager';
+import { COMPANION_LESSON_BONUS_XP } from '../../types/island';
 
 interface TypingArenaProps {
   lesson: Lesson;
@@ -99,9 +101,13 @@ export const TypingArena: React.FC<TypingArenaProps> = ({
       errorKeys: result.errorKeys,
     };
 
+    const companionBonusXp = profile.island.animals[profile.island.activeCompanionId]?.unlocked
+      ? COMPANION_LESSON_BONUS_XP
+      : 0;
+
     const updatedProfile: UserProfile = {
       ...profile,
-      xp: profile.xp + lesson.rewardXp + (stars === 3 ? 20 : 0),
+      xp: profile.xp + lesson.rewardXp + (stars === 3 ? 20 : 0) + companionBonusXp,
       coins: profile.coins + lesson.rewardCoins + (stars === 3 ? 15 : 0),
       completedLevels: {
         ...profile.completedLevels,
@@ -171,6 +177,9 @@ export const TypingArena: React.FC<TypingArenaProps> = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [handleKeyDown]);
 
+  const companion = profile.island.animals[profile.island.activeCompanionId];
+  const companionHat = companion?.hatId ? profile.island.cosmetics[companion.hatId] : undefined;
+  const companionBonusXp = companion?.unlocked ? COMPANION_LESSON_BONUS_XP : 0;
   const targetChars = lesson.practiceText.split('');
 
   const starsEarned =
@@ -206,6 +215,16 @@ export const TypingArena: React.FC<TypingArenaProps> = ({
           <RotateCcw className="w-3.5 h-3.5" /> Restart
         </button>
       </div>
+
+      {companion && (
+        <TypingCompanionWidget
+          animal={companion}
+          hatIcon={companionHat?.icon}
+          comboStreak={comboStreak}
+          hasError={hasCurrentError}
+          lessonComplete={status === 'completed'}
+        />
+      )}
 
       {/* Live Metric Ribbon */}
       <div className="grid grid-cols-4 gap-2 sm:gap-4">
@@ -350,7 +369,7 @@ export const TypingArena: React.FC<TypingArenaProps> = ({
                 <span className="text-xs text-cozy-subtext font-semibold">Rewards:</span>
                 <div className="text-sm font-extrabold text-amber-600 flex items-center justify-center gap-1.5 flex-wrap">
                   <span>+{lesson.rewardCoins + (starsEarned === 3 ? 15 : 0)} 🪙</span>
-                  <span>+{lesson.rewardXp + (starsEarned === 3 ? 20 : 0)} XP</span>
+                  <span>+{lesson.rewardXp + (starsEarned === 3 ? 20 : 0) + companionBonusXp} XP</span>
                   <span className="text-rose-500">+{starsEarned === 3 ? 2 : 1} 🍎 Snacks</span>
                 </div>
               </div>
