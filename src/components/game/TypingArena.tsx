@@ -116,6 +116,7 @@ export const TypingArena: React.FC<TypingArenaProps> = ({
       island: {
         ...profile.island,
         animals: updatedAnimals,
+        feedSnacksCount: profile.island.feedSnacksCount + (stars === 3 ? 2 : 1),
       },
       metrics: {
         ...profile.metrics,
@@ -171,6 +172,13 @@ export const TypingArena: React.FC<TypingArenaProps> = ({
   }, [handleKeyDown]);
 
   const targetChars = lesson.practiceText.split('');
+
+  const starsEarned =
+    netWpm >= lesson.targetWpm && accuracy >= lesson.minAccuracy
+      ? 3
+      : netWpm >= lesson.targetWpm || accuracy >= lesson.minAccuracy
+      ? 2
+      : 1;
 
   return (
     <div ref={containerRef} className="w-full max-w-4xl mx-auto space-y-5">
@@ -314,22 +322,14 @@ export const TypingArena: React.FC<TypingArenaProps> = ({
 
             {/* Stars Earned */}
             <div className="flex items-center justify-center gap-2">
-              {[1, 2, 3].map((starIdx) => {
-                const earned = (netWpm >= lesson.targetWpm && accuracy >= lesson.minAccuracy)
-                  ? true
-                  : (starIdx <= 2 && (netWpm >= lesson.targetWpm || accuracy >= lesson.minAccuracy))
-                  ? true
-                  : starIdx === 1;
-
-                return (
-                  <Star
-                    key={starIdx}
-                    className={`w-10 h-10 transition transform ${
-                      earned ? 'text-amber-400 fill-amber-400 scale-110 drop-shadow-sm' : 'text-slate-200'
-                    }`}
-                  />
-                );
-              })}
+              {[1, 2, 3].map((starIdx) => (
+                <Star
+                  key={starIdx}
+                  className={`w-10 h-10 transition transform ${
+                    starIdx <= starsEarned ? 'text-amber-400 fill-amber-400 scale-110 drop-shadow-sm' : 'text-slate-200'
+                  }`}
+                />
+              ))}
             </div>
 
             {/* Results Grid */}
@@ -348,9 +348,10 @@ export const TypingArena: React.FC<TypingArenaProps> = ({
               </div>
               <div>
                 <span className="text-xs text-cozy-subtext font-semibold">Rewards:</span>
-                <div className="text-sm font-extrabold text-amber-600 flex items-center justify-center gap-1">
-                  <span>+{lesson.rewardCoins} 🪙</span>
-                  <span>+{lesson.rewardXp} XP</span>
+                <div className="text-sm font-extrabold text-amber-600 flex items-center justify-center gap-1.5 flex-wrap">
+                  <span>+{lesson.rewardCoins + (starsEarned === 3 ? 15 : 0)} 🪙</span>
+                  <span>+{lesson.rewardXp + (starsEarned === 3 ? 20 : 0)} XP</span>
+                  <span className="text-rose-500">+{starsEarned === 3 ? 2 : 1} 🍎 Snacks</span>
                 </div>
               </div>
             </div>
